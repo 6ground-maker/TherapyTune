@@ -823,9 +823,22 @@ const App = () => {
   const [activeGraphAxis, setActiveGraphAxis] = useState<string>('energy');
   
   const { isRecording, startRecording, stopRecording, audioBlob, analyserRef, metrics, setAudioBlob, permissionError } = useAudioRecorder();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSliderChange = (axis: keyof AxisState, val: number) => {
     setManualState(prev => ({ ...prev, [axis]: val }));
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setInputText(content);
+    };
+    reader.readAsText(file);
   };
 
   const handleAnalyzeContext = async () => {
@@ -882,7 +895,7 @@ const App = () => {
         contents = [{
           role: "user",
           parts: [{ text: `The user set their state to: ${JSON.stringify(manualState)}. 
-             They added this context: "${inputText}". 
+             They provided this context (which might be a short text or a journal entry): "${inputText}". 
              Suggest adjustments to the state coordinates based on this text. Return 'suggested_state' and 'reasoning'.` }]
         }];
       }
@@ -1065,7 +1078,7 @@ const App = () => {
                    <div className="flex gap-2 mb-6 p-1 bg-slate-800/50 rounded-lg">
                       <button onClick={() => setActiveTab("SLIDERS")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === "SLIDERS" ? "bg-aurora text-slate-900 shadow-lg" : "text-slate-400 hover:text-white"}`}>Controls</button>
                       <button onClick={() => setActiveTab("VOICE")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === "VOICE" ? "bg-aurora text-slate-900 shadow-lg" : "text-slate-400 hover:text-white"}`}>+ Voice</button>
-                      <button onClick={() => setActiveTab("TEXT")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === "TEXT" ? "bg-aurora text-slate-900 shadow-lg" : "text-slate-400 hover:text-white"}`}>+ Text</button>
+                      <button onClick={() => setActiveTab("TEXT")} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === "TEXT" ? "bg-aurora text-slate-900 shadow-lg" : "text-slate-400 hover:text-white"}`}>+ Journal</button>
                    </div>
 
                    {/* Tab Content */}
@@ -1171,9 +1184,26 @@ const App = () => {
 
                       {activeTab === "TEXT" && (
                           <div className="flex flex-col h-full animate-fade-in">
+                            {/* File Upload Button */}
+                            <div className="mb-2 flex justify-end">
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef}
+                                    onChange={handleFileUpload}
+                                    accept=".md,.txt,.markdown"
+                                    className="hidden"
+                                />
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition-colors"
+                                >
+                                    <span className="text-lg">📄</span> Upload Journal/MD
+                                </button>
+                            </div>
+
                              <textarea
                                 className="w-full h-40 bg-slate-800/50 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-primary resize-none text-base"
-                                placeholder="Describe how you're feeling..."
+                                placeholder="Describe how you're feeling or upload a journal entry..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
                              />
@@ -1185,7 +1215,7 @@ const App = () => {
                                 {canProceed ? "Check with AI" : "Select a genre first"}
                              </button>
                              <p className="text-xs text-slate-500 mt-4 text-center">
-                                AI will read this and suggest slider adjustments.
+                                AI will read this text or uploaded file and suggest slider adjustments.
                              </p>
                           </div>
                       )}
